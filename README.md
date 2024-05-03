@@ -12,7 +12,7 @@ Spatial omics datasets offer insights into the spatial distribution of biomolecu
 
 ## Analysis Choices
 
-Our pipeline comprises carefully selected methodologies tailored to the unique challenges of spatial omics datasets.
+Our pipeline comprises methodologies for spatial omics datasets.
 
 ## Interpretation of Results
 
