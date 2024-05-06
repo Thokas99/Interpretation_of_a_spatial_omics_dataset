@@ -1,0 +1,119 @@
+---
+title: "Single_cell_spacial"
+author: "Thomas & Annalisa"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+## Loading packages
+
+Store package names in a vectors for ease of access and to load them easily
+
+```{r setup, message=FALSE, warning=FALSE}
+# List of R packages used in the script with a brief description of their purposes
+PACKAGES <- c(
+  "GEOquery",        # For accessing and retrieving Gene Expression Omnibus (GEO) data
+  "plotly",          # Interactive plotting library for creating dynamic and interactive visualizations
+  "RColorBrewer",    # Color palettes for enhancing the visual appeal of plots and charts
+  "biomaRt",         # Interface to access and query BioMart databases for biological annotations
+  "enrichR",         # For gene set enrichment analysis to identify enriched biological pathway
+  "Seurat",
+  "patchwork",
+  "tidyverse"
+)
+
+invisible(lapply(PACKAGES, library, character.only = TRUE))
+gc()
+# Install packages (uncomment the line below to install)
+# install.packages(PACKAGES)
+```
+## Data retrieval
+
+Retrieve dataset from GEO
+
+```{r Retrieve dataset from GEO, message=FALSE, warning=FALSE}
+gset2 <- getGEO("GSE227627", GSEMatrix =TRUE)
+```
+### Loading the data 
+
+Load the Seurat object that contains both the spot-level expression data along with the associated image of the tissue slice (anterior section)
+
+```{r load_data,warning=F,message=F}
+
+data1 = readRDS("./data/GSE227627/GSE227627_VisiumS1/GSE227627_VisiumS1.rds")
+data2 = readRDS("./data/GSE227627/GSE227627_VisiumS2/GSE227627_VisiumS2.rds")
+data5 = readRDS("./data/GSE227627/GSE227627_VisiumS5/GSE227627_VisiumS5.rds")
+data6 = readRDS("./data/GSE227627/GSE227627_VisiumS6/GSE227627_VisiumS6.rds")
+
+data1[["Spatial"]]@counts[1:5,1:5]
+data2[["Spatial"]]@counts[1:5,1:5]
+data5[["Spatial"]]@counts[1:5,1:5]
+data6[["Spatial"]]@counts[1:5,1:5]
+
+```
+
+The visium data from 10x consists of the following data types:
+
+1) A spot by gene expression matrix (similar to a digital gene expression matrix, with spots instead of cells)
+2) An image of the tissue slice (obtained from Hematoxylin and Eosin (H&E) staining during data acquisition)
+3) Scaling factors that relate the original high resolution image to the lower resolution image used here for visualization.
+
+In the Seurat object, the spot by gene expression matrix is similar to a typical “RNA” Assay but contains spot level, not single-cell level data. The image itself is stored in a new images slot in the Seurat object. The images slot also stores the information necessary to associate spots with their physical position on the tissue image.
+
+## Data preprocessing
+
+The initial preprocessing steps are similar to a typical scRNA-seq experiment. 
+We first need to normalize the data in order to account for variance in sequencing depth across data points.
+The variance in molecular counts / spot can be substantial for spatial datasets, particularly if there are differences in cell density across the tissue. We see substantial heterogeneity here, which requires effective normalization.
+
+
+```{r qc_metrics, warning=F, message=F}
+
+p1 <- VlnPlot(data2, 
+                 features = "nCount_Spatial", 
+                 pt.size = 0.2) + NoLegend()
+
+p2 <- SpatialFeaturePlot(data2, 
+                            features = "nCount_Spatial") + 
+   theme(legend.position = "right")
+
+wrap_plots(p1, p2)
+
+```
+### Normalization, feature selection and scaling
+
+The plots above demonstrates that the variance in molecular counts across spots is not just technical in nature, but also depends on the tissue anatomy. 
+For example, regions of the tissue that are depleted for neurons (such as the cortical white matter), exhibit lower molecular counts. As a result, standard approaches (such as the LogNormalize() function), which force each data point to have the same underlying ‘size’ after normalization, can be problematic.
+
+As an alternative, the sctransform method can be used (Hafemeister and Satija, Genome Biology 2019), which builds regularized negative binomial models of gene expression in order to account for technical artifacts while preserving biological variance. sctransform normalizes the data, detects high-variance features, and stores the data in the SCT assay.
+
+```{r normalization, warning=F, message=F}
+
+brain_a1 <- SCTransform(data2, 
+                     assay = "Spatial", 
+                     verbose = T)
+
+brain_a1
+```
+### Gene expression visualization
+
+Seurat offers functionalities to explore and interact with the inherently visual nature of spatial data. The SpatialFeaturePlot() function in Seurat extends FeaturePlot(), and can overlay molecular data on top of tissue histology. For example, in this data set of the mouse brain, the gene Hpca is a strong hippocampus marker and Ttr is a marker of the choroid plexus.
+
+```{r plot_features, warning=F, message=F}
+
+SpatialFeaturePlot(brain_a1, features = c("Hpca", "Ttr"))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
