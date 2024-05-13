@@ -18,3 +18,6 @@ Our pipeline comprises methodologies for spatial omics datasets.
 
 We aim to offer comprehensive interpretations of the dataset, contextualizing findings within existing biological knowledge.
 
+<div align="center">
+  <img src="img/uni_logo.jpg" alt="drawing" width="200"/>
+</div>
