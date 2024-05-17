@@ -1,4 +1,4 @@
-# Interpretation of a Spacial omics dataset
+# Interpretation of a Spatial omics dataset
 
 ## Overview
 Welcome to our replication study repository for the class [Single Cell and Spatial Omics](https://unitn.coursecatalogue.cineca.it/insegnamenti/2023/95642/2016/9999/10616?annoOrdinamento=2016). 
