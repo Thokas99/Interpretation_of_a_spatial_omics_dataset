@@ -7,12 +7,17 @@ output:
     toc: true
 ---
 
----
+------------------------------------------------------------------------
 
-This document contains the single cell analysis performed in the paper by *Jung, SH., Hwang, BH., Shin, S. et al. Spatiotemporal dynamics of macrophage heterogeneity and a potential function of Trem2hi macrophages in infarcted hearts. Nat Commun 13, 4580 (2022)*. https://doi.org/10.1038/s41467-022-32284-2
-
+This document contains the single cell analysis performed in the paper by [*Jung, SH., Hwang, BH., Shin, S. et al. Spatiotemporal dynamics of macrophage heterogeneity and a potential function of Trem2hi macrophages in infarcted hearts. Nat Commun 13, 4580 (2022)*](https://doi.org/10.1038/s41467-022-32284-2).
 
 ### Load necessary libraries
+
+```{r setup, include=FALSE}
+setwd("~/Documents/Repo_Git/Interpretation_of_a_spatial_omics_dataset/data")
+```
+
+
 ```{r load_packages, message=FALSE, warning=FALSE}
 library(Seurat)
 library(SingleR)
@@ -32,12 +37,15 @@ options(future.globals.maxSize = 300000 * 1024^2)
 ```
 
 ## Load and process expression data
+
+To perform the analysis, we will load the data downloaded from [GSE163129](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE163129).
+
 ```{r}
-Control.data <- Read10X_h5("./GSE163129_RAW/GSM4972357_Steady-state_filtered_feature_bc_matrix.h5")
-MI_1D.data <- Read10X_h5("./GSE163129_RAW/GSM4972358_Day1_post-MI_filtered_feature_bc_matrix.h5")
-MI_3D.data <- Read10X_h5("./GSE163129_RAW/GSM4972359_Day3_post-MI_filtered_feature_bc_matrix.h5")
-MI_5D.data <- Read10X_h5("./GSE163129_RAW/GSM4972360_Day5_post-MI_filtered_feature_bc_matrix.h5")
-MI_7D.data <- Read10X_h5("./GSE163129_RAW/GSM4972361_Day7_post-MI_filtered_feature_bc_matrix.h5")
+Control.data <- Read10X_h5("../data/GSE163129_RAW/GSM4972357_Steady-state_filtered_feature_bc_matrix.h5")
+MI_1D.data <- Read10X_h5("../data/GSE163129_RAW/GSM4972358_Day1_post-MI_filtered_feature_bc_matrix.h5")
+MI_3D.data <- Read10X_h5("../data/GSE163129_RAW/GSM4972359_Day3_post-MI_filtered_feature_bc_matrix.h5")
+MI_5D.data <- Read10X_h5("../data/GSE163129_RAW/GSM4972360_Day5_post-MI_filtered_feature_bc_matrix.h5")
+MI_7D.data <- Read10X_h5("../data/GSE163129_RAW/GSM4972361_Day7_post-MI_filtered_feature_bc_matrix.h5")
 ```
 
 ```{r}
@@ -86,26 +94,50 @@ scatter_7D_2 <- FeatureScatter(MI.7D, "nCount_RNA", "percent.mito")
 scatter_7D_1 + scatter_7D_2
 ```
 
-
-```{r}
+```{r, fig.cap="Violin plot control"}
 VlnPlot(MI.control, features = c("nFeature_RNA", "nCount_RNA", "percent.mito"), ncol = 3)
+```
+```{r, fig.cap="Violin plot Day 1"}
 VlnPlot(MI.1D, features = c("nFeature_RNA", "nCount_RNA", "percent.mito"), ncol = 3)
-VlnPlot(MI.3D, features = c("nFeature_RNA", "nCount_RNA", "percent.mito"), ncol = 3)
-VlnPlot(MI.5D, features = c("nFeature_RNA", "nCount_RNA", "percent.mito"), ncol = 3)
-VlnPlot(MI.7D, features = c("nFeature_RNA", "nCount_RNA", "percent.mito"), ncol = 3)
-
 ```
 
+```{r, fig.cap="Violin plot Day 3"}
+VlnPlot(MI.3D, features = c("nFeature_RNA", "nCount_RNA", "percent.mito"), ncol = 3)
+```
+
+```{r, fig.cap="Violin plot Day 5"}
+VlnPlot(MI.5D, features = c("nFeature_RNA", "nCount_RNA", "percent.mito"), ncol = 3)
+```
+
+```{r, fig.cap="Violin plot Day 7"}
+VlnPlot(MI.7D, features = c("nFeature_RNA", "nCount_RNA", "percent.mito"), ncol = 3)
+```
+
+
 ## Apply filter criteria
-```{r}
+
+```{r quantile_control}
 quantile(MI.control$nFeature_RNA, probs = c(0.02,0.98))
+```
+
+```{r quantile_day1}
 quantile(MI.1D$nFeature_RNA, probs = c(0.02,0.98))
+```
+
+```{r quantile_day3}
 quantile(MI.3D$nFeature_RNA, probs = c(0.02,0.98))
+```
+
+```{r quantile_day5}
 quantile(MI.5D$nFeature_RNA, probs = c(0.02,0.98))
+```
+
+```{r quantile_day7}
 quantile(MI.7D$nFeature_RNA, probs = c(0.02,0.98))
 ```
 
-```{r}
+
+```{r subsetting}
 MI.control <- subset(x = MI.control, subset = nFeature_RNA > 371 & nFeature_RNA < 5061 & percent.mito < 10)
 MI.1D <- subset(x = MI.1D, subset = nFeature_RNA > 350 & nFeature_RNA < 5199 & percent.mito < 10)
 MI.3D <- subset(x = MI.3D, subset = nFeature_RNA > 407 & nFeature_RNA < 7825 & percent.mito < 10)
@@ -115,12 +147,15 @@ MI.7D <- subset(x = MI.7D, subset = nFeature_RNA > 410 & nFeature_RNA < 6132 & p
 ```
 
 ## MergeData
+
 ```{r}
 experiment.aggregate <- merge(x = MI.control, y = c(MI.1D,MI.3D,MI.5D,MI.7D))
 
 samplename = experiment.aggregate@meta.data$orig.ident
 table(samplename)
+```
 
+```{r}
 batchorder = rep("MI",length(samplename))
 batchorder[samplename %in% c("MI_CTR")] = "1"
 batchorder[samplename %in% c("MI_1D")] = "2"
@@ -139,12 +174,15 @@ names(batchid) = colnames(experiment.aggregate)
 
 experiment.aggregate <- AddMetaData(object = experiment.aggregate, metadata = batchorder, col.name = "batchorder")
 table(experiment.aggregate@meta.data$batchorder)
+```
 
+```{r}
 experiment.aggregate <- AddMetaData(object = experiment.aggregate, metadata = batchid, col.name = "batchid")
 table(experiment.aggregate@meta.data$batchid)
 ```
 
 ## Perform integration
+
 ```{r}
 MI.list <- SplitObject(experiment.aggregate, split.by = "batchid")
 
@@ -181,6 +219,7 @@ table(MI.integrated@meta.data$integrated_snn_res.1.4,MI.integrated@meta.data$bat
 ```
 
 ## SingleR
+
 ```{r}
 mrsd.se <- ImmGenData()
 MI.integrated.se <- as.SingleCellExperiment(MI.integrated, assay = "RNA")
@@ -194,7 +233,8 @@ MI.mrsd.pred <- SingleR(test = MI.integrated.se, ref = mrsd.se, method = "single
 MI.integrated[["mrsd.fine"]] <- DC.mrsd.pred$labels
 ```
 
-## Filter Endothelial/Fibroblast, double cell type clusteres and other technical noise[PMID:30471926] (CL 5, 10, 12, 23, 24, 27, 29, 30) 
+## Filter Endothelial/Fibroblast, double cell type clusteres and other technical noise[<PMID:30471926>] (CL 5, 10, 12, 23, 24, 27, 29, 30)
+
 ```{r}
 MI.integrated.1st.filtered = subset(MI.integrated, idents = c(0,1,2,3,4,6,7,8,9,11,13,14,15,16,17,18,19,20,21,22,25,26,28,31,32,33))
 DefaultAssay(MI.integrated.1st.filtered) <- "integrated"
@@ -211,4 +251,3 @@ DimPlot(object = MI.integrated.1st.filtered, reduction = 'umap', group.by = "ori
 MI.integrated.1st.filtered <- SetIdent(MI.integrated.1st.filtered, value = 'integrated_snn_res.1.5')
 
 ```
-
