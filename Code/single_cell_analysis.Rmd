@@ -1,7 +1,6 @@
 ---
 title: "Single Cell Analysis"
 author: "Thomas & Annalisa"
-date: '`r Sys.Date()`'
 output: 
   html_document:
     toc: true
@@ -12,11 +11,6 @@ output:
 This document contains the single cell analysis performed in the paper by [*Jung, SH., Hwang, BH., Shin, S. et al. Spatiotemporal dynamics of macrophage heterogeneity and a potential function of Trem2hi macrophages in infarcted hearts. Nat Commun 13, 4580 (2022)*](https://doi.org/10.1038/s41467-022-32284-2).
 
 ### Load necessary libraries
-
-```{r setup, include=FALSE}
-setwd("~/Documents/Repo_Git/Interpretation_of_a_spatial_omics_dataset/data")
-```
-
 
 ```{r load_packages, message=FALSE, warning=FALSE}
 library(Seurat)
@@ -56,6 +50,7 @@ MI.5D <- CreateSeuratObject(MI_5D.data, project = "MI_5D", min.cells = 10)
 MI.7D <- CreateSeuratObject(MI_7D.data, project = "MI_7D", min.cells = 10)
 ```
 
+Add percentage mito to metadata
 ```{r}
 MI.control[['percent.mito']] <- PercentageFeatureSet(MI.control, pattern = "^mt-")
 MI.1D[['percent.mito']] <- PercentageFeatureSet(MI.1D, pattern = "^mt-")
@@ -143,7 +138,6 @@ MI.1D <- subset(x = MI.1D, subset = nFeature_RNA > 350 & nFeature_RNA < 5199 & p
 MI.3D <- subset(x = MI.3D, subset = nFeature_RNA > 407 & nFeature_RNA < 7825 & percent.mito < 10)
 MI.5D <- subset(x = MI.5D, subset = nFeature_RNA > 493 & nFeature_RNA < 6741 & percent.mito < 10)
 MI.7D <- subset(x = MI.7D, subset = nFeature_RNA > 410 & nFeature_RNA < 6132 & percent.mito < 10)
-
 ```
 
 ## MergeData
@@ -186,36 +180,69 @@ table(experiment.aggregate@meta.data$batchid)
 ```{r}
 MI.list <- SplitObject(experiment.aggregate, split.by = "batchid")
 
+# error here
 for (i in 1:length(MI.list)) {
   MI.list[[i]] <- NormalizeData(MI.list[[i]], verbose = FALSE)
   MI.list[[i]] <- FindVariableFeatures(MI.list[[i]], selection.method = "vst", 
                                              nfeatures = 2000, verbose = FALSE)
 }
+# returns
+# Error in `[<-.data.frame`(`*tmp*`, , i, value = c(0.00625, 0.267091836734694,  : 
+#  replacement has 15945 rows, data has 17260
+
 
 MI.anchors <- FindIntegrationAnchors(object.list = MI.list, dims = 1:30)
+
 MI.integrated <- IntegrateData(anchorset = MI.anchors, dims = 1:30)
+
 all.genes <- rownames(MI.integrated)
+
 MI.integrated <- ScaleData(MI.integrated, features = all.genes, verbose = FALSE)
+
 MI.integrated <- RunPCA(MI.integrated, verbose = FALSE)
+
 ElbowPlot(object = MI.integrated, ndims = 50)
+
 use.pcs = 1:40
+
 MI.integrated <- RunUMAP(MI.integrated, reduction = "pca", dims = use.pcs)
+
 MI.integrated <- FindNeighbors(object = MI.integrated, reduction = "pca", dims = use.pcs)
+
 MI.integrated <- FindClusters(object = MI.integrated, resolution = seq(0.5,2,0.1))
-sapply(grep("^integrated_snn_res",colnames(MI.integrated@meta.data),value = TRUE), function(x) length(unique(MI.integrated@meta.data[,x])))
-DimPlot(object = MI.integrated, reduction = 'umap', group.by = "integrated_snn_res.1.4", pt.size=0.5, label = TRUE, repel = TRUE) + NoLegend()
+
+sapply(grep("^integrated_snn_res",colnames(MI.integrated@meta.data),value = TRUE), function(x)
+  length(unique(MI.integrated@meta.data[,x])))
+
+DimPlot(object = MI.integrated, 
+        reduction = 'umap', 
+        group.by = "integrated_snn_res.1.4", 
+        pt.size=0.5, label = TRUE, repel = TRUE) + NoLegend()
+
 DimPlot(object = MI.integrated, reduction = 'umap', group.by = "batchid", pt.size=0.5)
-DimPlot(object = MI.integrated, reduction = 'umap', group.by = "orig.ident", split.by = "batchid",  pt.size=0.5, ncol = 3) + NoLegend()
+
+DimPlot(object = MI.integrated, 
+        reduction = 'umap', 
+        group.by = "orig.ident", 
+        split.by = "batchid",  
+        pt.size=0.5, ncol = 3) + NoLegend()
+
 MI.integrated <- SetIdent(MI.integrated, value = 'integrated_snn_res.1.4')
 
 DefaultAssay(MI.integrated) <- "RNA"
-MI.integrated <- NormalizeData(MI.integrated, verbose = FALSE)
-all.genes <- rownames(MI.integrated)
-MI.integrated <- ScaleData(MI.integrated, features = all.genes, verbose = FALSE)
-markers_all_RNA <- FindAllMarkers(object = MI.integrated, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, test.use = "LR")
-write.csv(markers_all_RNA, file = "MI_preprocessing_cluster_allmarker_Genes_RNA_RES14.csv")
-table(MI.integrated@meta.data$integrated_snn_res.1.4,MI.integrated@meta.data$batchid)
 
+MI.integrated <- NormalizeData(MI.integrated, verbose = FALSE)
+
+all.genes <- rownames(MI.integrated)
+
+MI.integrated <- ScaleData(MI.integrated, features = all.genes, verbose = FALSE)
+
+markers_all_RNA <- FindAllMarkers(object = MI.integrated, 
+                                  only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, test.use = "LR")
+
+write.csv(markers_all_RNA, file = "../output/MI_preprocessing_cluster_allmarker_Genes_RNA_RES14.csv")
+
+table(MI.integrated@meta.data$integrated_snn_res.1.4,MI.integrated@meta.data$batchid)
 ```
 
 ## SingleR
@@ -249,5 +276,126 @@ DimPlot(object = MI.integrated.1st.filtered, reduction = 'umap', group.by = "int
 DimPlot(object = MI.integrated.1st.filtered, reduction = 'umap', group.by = "batchid", pt.size=0.5)
 DimPlot(object = MI.integrated.1st.filtered, reduction = 'umap', group.by = "orig.ident", split.by = "batchid",  pt.size=0.5, ncol = 3) + NoLegend()
 MI.integrated.1st.filtered <- SetIdent(MI.integrated.1st.filtered, value = 'integrated_snn_res.1.5')
+```
+
+## Cluster rename
+```{r}
+new.cluster.ids <- c("MAC", "MAC", "MAC", "MAC", "Neutrophil", "Neutrophil", "MAC", "MAC", "B", "MAC", "MAC", "Monocytes", "MAC", "NK", "MAC", "DC", "Neutrophil", "MAC", "T", "DC", "Monocytes", "Xcr1_DC", "Mature_DC", "DC", "ILC2", "MAC", "Plasma", "Mast")
+
+names(x = new.cluster.ids) <- levels(x = MI.integrated.1st.filtered)
+
+MI.integrated.1st.filtered <- RenameIdents(object = MI.integrated.1st.filtered, new.cluster.ids)
+MI.integrated.1st.filtered <- StashIdent(MI.integrated.1st.filtered, save.name = "CellType")
+
+DimPlot(object = MI.integrated.1st.filtered, reduction = 'umap', group.by = "CellType", pt.size=0.5)
+
+DimPlot(object = MI.integrated.1st.filtered, reduction = 'umap', group.by = "CellType", split.by = "batchid",  pt.size=0.5, ncol = 2) + NoLegend()
+
+markers_all_RNA <- FindAllMarkers(object = MI.integrated.1st.filtered, 
+                                  only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, test.use = "LR")
+
+write.csv(markers_all_RNA, file = "MI_1st_filtered_cluster_allmarker_Genes_RNA_RES15.csv")
+
+table(MI.integrated.1st.filtered@meta.data$integrated_snn_res.1.5,MI.integrated.1st.filtered@meta.data$batchid)
 
 ```
+
+## Main_Figure1
+```{r}
+DimPlot(object = MI.integrated.1st.filtered, reduction = 'umap', group.by = "CellType", pt.size=1) 
+MI.integrated.1st.filtered <- SetIdent(MI.integrated.1st.filtered, value = 'batchid')
+fig1bSS = subset(MI.integrated.1st.filtered, idents = "MI_7D")
+DimPlot(object = fig1bSS, reduction = 'umap', group.by = "CellType", pt.size=1) + NoLegend()+ xlim(c(-13.5,13.5)) + ylim(c(-13,15))
+fig1bD1 = subset(MI.integrated.1st.filtered, idents = "MI_7D")
+DimPlot(object = fig1bD1, reduction = 'umap', group.by = "CellType", pt.size=1) + NoLegend()+ xlim(c(-13.5,13.5)) + ylim(c(-13,15))
+fig1bD3 = subset(MI.integrated.1st.filtered, idents = "MI_7D")
+DimPlot(object = fig1bD3, reduction = 'umap', group.by = "CellType", pt.size=1) + NoLegend()+ xlim(c(-13.5,13.5)) + ylim(c(-13,15))
+fig1bD5 = subset(MI.integrated.1st.filtered, idents = "MI_7D")
+DimPlot(object = fig1bD5, reduction = 'umap', group.by = "CellType", pt.size=1) + NoLegend()+ xlim(c(-13.5,13.5)) + ylim(c(-13,15))
+fig1bD7 = subset(MI.integrated.1st.filtered, idents = "MI_7D")
+DimPlot(object = fig1bD7, reduction = 'umap', group.by = "CellType", pt.size=1) + NoLegend()+ xlim(c(-13.5,13.5)) + ylim(c(-13,15))
+
+Macrophage_genes <- c("Adgre1", "Cd68", "Csf1r")
+Neutrophil_genes <- c("Csf3r", "S100a9", "S100a8")
+B_genes <- c("Ms4a1", "Cd79a", "Ly6d")
+Monocyte_genes <- c("Ly6c2", "Chil3", "F10")
+NK_genes <- c("Nkg7", "Klrb1c", "Gzma")
+CD209DC_genes <- c("Cd209a", "Klrd1", "Flt3")
+T_genes <- c("Cd3e", "Cd3d", "Lef1")
+XcrDC_genes <- c("Xcr1", "Ifi205", "Itgae")
+MigratoryDC_genes <- c("Ccr7", "Fscn1", "Cacnb3")
+ILC2_genes <- c("Rora", "Cxcr6", "Gata3")
+PC_genes <- c("Jchain", "Iglv1", "Mzb1")
+Mast_genes <- c("Cma1", "Kit", "Rab27b")
+
+MI.integrated.1st.filtered <- SetIdent(MI.integrated.1st.filtered, value = 'CellType')
+MI.integrated.1st.filtered@active.ident <- factor(MI.integrated.1st.filtered@active.ident, levels = c("Mast","Plasma","ILC2","Mature_DC","Xcr1_DC","T","DC","NK","Monocytes","B","Neutrophil","MAC"))
+DotPlot(object = MI.integrated.1st.filtered, features = c(Macrophage_genes,Neutrophil_genes,B_genes,Monocyte_genes,NK_genes,CD209DC_genes,T_genes,XcrDC_genes,MigratoryDC_genes,ILC2_genes,PC_genes,Mast_genes), cols = c("White", "red")) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+FeaturePlot(MI.integrated.1st.filtered, features = "Adgre1",cols = c("gray", "red"), pt.size=1)
+FeaturePlot(MI.integrated.1st.filtered, features = "S100a9",cols = c("gray", "red"), pt.size=1)
+FeaturePlot(MI.integrated.1st.filtered, features = "Cd79a",cols = c("gray", "red"), pt.size=1)
+FeaturePlot(MI.integrated.1st.filtered, features = "Ly6c2",cols = c("gray", "red"), pt.size=1)
+FeaturePlot(MI.integrated.1st.filtered, features = "Nkg7",cols = c("gray", "red"), pt.size=1)
+FeaturePlot(MI.integrated.1st.filtered, features = "Cd209a",cols = c("gray", "red"), pt.size=1)
+FeaturePlot(MI.integrated.1st.filtered, features = "Cd3e",cols = c("gray", "red"), pt.size=1)
+FeaturePlot(MI.integrated.1st.filtered, features = "Xcr1",cols = c("gray", "red"), pt.size=1)
+FeaturePlot(MI.integrated.1st.filtered, features = "Fscn1",cols = c("gray", "red"), pt.size=1)
+
+LR_markers_MI_filtered_Final <- FindAllMarkers(object = MI.integrated.1st.filtered, test.use = "LR", only.pos = TRUE, min.pct = 0.1, logfc.threshold = 0.25)
+write.csv(LR_markers_MI_filtered_Final, file = "Cluster_allmarker_Genes_Integrated_Filtered_Final_12_cell_Types.csv")
+table(MI.integrated.1st.filtered@meta.data$integrated_snn_res.0.9,MI.integrated.1st.filtered@meta.data$orig.ident)
+
+```
+
+##  Macrophage subset analysis
+```{r}
+MI.macrophage = subset(MI.integrated.1st.filtered, idents = c(0,1,2,3,6,7,9,10,11,12,14,17,20,25))
+DefaultAssay(MI.macrophage) <- "integrated"
+MI.macrophage.recluster <- RunPCA(object = MI.macrophage, verbose = FALSE)
+ElbowPlot(object = MI.macrophage.recluster, ndims = 50)
+use.pcs = 1:30
+MI.macrophage.recluster <- FindNeighbors(object = MI.macrophage.recluster, reduction = "pca", dims = use.pcs)
+MI.macrophage.recluster <- FindClusters(object = MI.macrophage.recluster, reduction.type = "pca", dims.use = use.pcs, resolution = seq(0.1,2,0.1), print.output = FALSE, save.SNN = TRUE)
+MI.macrophage.recluster <- RunUMAP(object = MI.macrophage.recluster, reduction = "pca", dims = use.pcs)
+sapply(grep("^integrated_snn_res",colnames(MI.macrophage.recluster@meta.data),value = TRUE), function(x) length(unique(MI.macrophage.recluster@meta.data[,x])))
+DimPlot(object = MI.macrophage.recluster, reduction = 'umap', group.by = "integrated_snn_res.1.5", pt.size=0.1, label = TRUE, repel = TRUE) + NoLegend()
+MI.macrophage.recluster <- SetIdent(MI.macrophage.recluster, value = 'integrated_snn_res.1.5')
+
+```
+
+## 1st round filter: filtering clusters other than macrophages
+```{r}
+MI.macrophage.recluster = subset(MI.macrophage.recluster, idents = c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,18))
+DefaultAssay(MI.macrophage.recluster) <- "integrated"
+MI.macrophage.recluster <- RunPCA(object = MI.macrophage.recluster, verbose = FALSE)
+ElbowPlot(object = MI.macrophage.recluster, ndims = 50)
+use.pcs = 1:40
+MI.macrophage.recluster <- FindNeighbors(object = MI.macrophage.recluster, reduction = "pca", dims = use.pcs)
+MI.macrophage.recluster <- FindClusters(object = MI.macrophage.recluster, reduction.type = "pca", dims.use = use.pcs, resolution = seq(0.1,2,0.1), print.output = FALSE, save.SNN = TRUE)
+MI.macrophage.recluster <- RunUMAP(object = MI.macrophage.recluster, reduction = "pca", dims = use.pcs)
+sapply(grep("^integrated_snn_res",colnames(MI.macrophage.recluster@meta.data),value = TRUE), function(x) length(unique(MI.macrophage.recluster@meta.data[,x])))
+DimPlot(object = MI.macrophage.recluster, reduction = 'umap', group.by = "integrated_snn_res.1.5", pt.size=0.1, label = TRUE, repel = TRUE) + NoLegend()
+MI.macrophage.recluster <- SetIdent(MI.macrophage.recluster, value = 'integrated_snn_res.1.5')
+
+```
+
+## 2nd round filter and Figure 3: neutrophil subcluster filtering
+```{r}
+MI.macrophage.recluster = subset(MI.macrophage.recluster, idents = c(0,1,2,3,4,5,6,7,8,9,10,11,12,14,15,16))
+current.cluster.ids <- c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,16,17,18,19)
+new.cluster.ids <- c(1,0,3,4,2,5,6,7,0,9,2,10,11,12,8,13,8,14,15)
+MI.macrophage.recluster@active.ident <- plyr::mapvalues(x = MI.macrophage.recluster@active.ident, from = current.cluster.ids, to = new.cluster.ids)
+MI.macrophage.recluster <- StashIdent(MI.macrophage.recluster, save.name = "FigureCluster")
+DimPlot(object = MI.macrophage.recluster, reduction = 'umap', group.by = "FigureCluster", pt.size=1, label = TRUE, repel = TRUE)
+MI.macrophage.recluster <- SetIdent(MI.macrophage.recluster, value = 'FigureCluster')
+MI.macrophage.recluster@active.ident <- factor(MI.macrophage.recluster@active.ident, ordered = T, levels = c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15))
+
+DefaultAssay(MI.macrophage.recluster) <- "RNA"
+markers_all_RNA <- FindAllMarkers(object = MI.macrophage.recluster, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, test.use = "LR")
+write.csv(markers_all_RNA, file = "MI_MF_subset_Figure_Genes.csv")
+table(MI.macrophage.recluster@meta.data$FigureCluster,MI.macrophage.recluster@meta.data$batchid)
+
+```
+
+
+
