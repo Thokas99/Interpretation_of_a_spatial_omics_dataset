@@ -20,12 +20,13 @@ Our replication study aims to:
 - [Thomas](https://github.com/Thokas99)
 - [Annalisa](https://github.com/annalisaxamin)
 
-## License
-This project is licensed under the [MIT License](LICENSE). 
-
 ## Acknowledgments
 - We would like to express our gratitude to Jung, S. H., Hwang, B. H., Shin, S., Park, E. H., Park, S. H., Kim, C. W., ... & Chung, Y. J. for sharing their datasets and code for replication.
 - All original files can be found at this [link](https://github.com/IRCGP-Lab/Macrophage-heterogeneity-after-MI/tree/main)
+
+### This analysis was conducted using the following R packages:
+- [Seurat](https://satijalab.org/seurat/): An R package designed for QC, analysis, and exploration of single-cell RNA-seq data.
+- [tidyverse](https://www.tidyverse.org/): A collection of R packages for data manipulation and visualization.
 
 <div align="center">
   <img src="img/uni_logo.jpg" alt="drawing" width="200"/>
