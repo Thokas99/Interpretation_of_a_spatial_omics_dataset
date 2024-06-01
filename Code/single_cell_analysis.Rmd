@@ -177,7 +177,7 @@ table(experiment.aggregate@meta.data$batchid)
 
 ## Perform integration
 
-```{r}
+```{r, eval=FALSE}
 MI.list <- SplitObject(experiment.aggregate, split.by = "batchid")
 
 # error here
@@ -247,7 +247,7 @@ table(MI.integrated@meta.data$integrated_snn_res.1.4,MI.integrated@meta.data$bat
 
 ## SingleR
 
-```{r}
+```{r, eval=FALSE}
 mrsd.se <- ImmGenData()
 MI.integrated.se <- as.SingleCellExperiment(MI.integrated, assay = "RNA")
 mrsd.common <- intersect(rownames(MI.integrated.se), rownames(mrsd.se))
@@ -262,7 +262,7 @@ MI.integrated[["mrsd.fine"]] <- DC.mrsd.pred$labels
 
 ## Filter Endothelial/Fibroblast, double cell type clusteres and other technical noise[<PMID:30471926>] (CL 5, 10, 12, 23, 24, 27, 29, 30)
 
-```{r}
+```{r, eval=FALSE}
 MI.integrated.1st.filtered = subset(MI.integrated, idents = c(0,1,2,3,4,6,7,8,9,11,13,14,15,16,17,18,19,20,21,22,25,26,28,31,32,33))
 DefaultAssay(MI.integrated.1st.filtered) <- "integrated"
 MI.integrated.1st.filtered <- RunPCA(MI.integrated.1st.filtered, verbose = FALSE)
@@ -279,7 +279,7 @@ MI.integrated.1st.filtered <- SetIdent(MI.integrated.1st.filtered, value = 'inte
 ```
 
 ## Cluster rename
-```{r}
+```{r, eval=FALSE}
 new.cluster.ids <- c("MAC", "MAC", "MAC", "MAC", "Neutrophil", "Neutrophil", "MAC", "MAC", "B", "MAC", "MAC", "Monocytes", "MAC", "NK", "MAC", "DC", "Neutrophil", "MAC", "T", "DC", "Monocytes", "Xcr1_DC", "Mature_DC", "DC", "ILC2", "MAC", "Plasma", "Mast")
 
 names(x = new.cluster.ids) <- levels(x = MI.integrated.1st.filtered)
@@ -301,7 +301,7 @@ table(MI.integrated.1st.filtered@meta.data$integrated_snn_res.1.5,MI.integrated.
 ```
 
 ## Main_Figure1
-```{r}
+```{r, eval=FALSE}
 DimPlot(object = MI.integrated.1st.filtered, reduction = 'umap', group.by = "CellType", pt.size=1) 
 MI.integrated.1st.filtered <- SetIdent(MI.integrated.1st.filtered, value = 'batchid')
 fig1bSS = subset(MI.integrated.1st.filtered, idents = "MI_7D")
@@ -348,7 +348,7 @@ table(MI.integrated.1st.filtered@meta.data$integrated_snn_res.0.9,MI.integrated.
 ```
 
 ##  Macrophage subset analysis
-```{r}
+```{r, eval=FALSE}
 MI.macrophage = subset(MI.integrated.1st.filtered, idents = c(0,1,2,3,6,7,9,10,11,12,14,17,20,25))
 DefaultAssay(MI.macrophage) <- "integrated"
 MI.macrophage.recluster <- RunPCA(object = MI.macrophage, verbose = FALSE)
@@ -364,7 +364,7 @@ MI.macrophage.recluster <- SetIdent(MI.macrophage.recluster, value = 'integrated
 ```
 
 ## 1st round filter: filtering clusters other than macrophages
-```{r}
+```{r, eval=FALSE}
 MI.macrophage.recluster = subset(MI.macrophage.recluster, idents = c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,18))
 DefaultAssay(MI.macrophage.recluster) <- "integrated"
 MI.macrophage.recluster <- RunPCA(object = MI.macrophage.recluster, verbose = FALSE)
@@ -380,7 +380,7 @@ MI.macrophage.recluster <- SetIdent(MI.macrophage.recluster, value = 'integrated
 ```
 
 ## 2nd round filter and Figure 3: neutrophil subcluster filtering
-```{r}
+```{r, eval=FALSE}
 MI.macrophage.recluster = subset(MI.macrophage.recluster, idents = c(0,1,2,3,4,5,6,7,8,9,10,11,12,14,15,16))
 current.cluster.ids <- c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,16,17,18,19)
 new.cluster.ids <- c(1,0,3,4,2,5,6,7,0,9,2,10,11,12,8,13,8,14,15)
